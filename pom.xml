@@ -1,0 +1,94 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>edu.acceso.testjdbc</groupId>
+    <artifactId>testjdbc</artifactId>
+    <name>testjdbc</name>
+    <description>Descripción de testjdbc</description>
+    <version>1.0.0</version>
+
+    <developers>
+        <developer>
+            <id>josem-dam</id>
+            <name>José Miguel Sánchez Alés</name>
+            <email>jsanale860@g.educaand.es</email>
+        </developer>
+    </developers>
+
+    <properties>
+        <maven.compiler.release>21</maven.compiler.release>
+        <javadoc.plugin.version>3.11.3</javadoc.plugin.version>
+    </properties>
+
+    <profiles>
+        <!-- Para que "maven clean -Pclean-javadoc-only" sólo borre la documentación -->
+        <profile>
+            <id>clean-javadoc-only</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-clean-plugin</artifactId>
+                        <configuration>
+                            <excludeDefaultDirectories>true</excludeDefaultDirectories>
+                            <filesets>
+                                <fileset>
+                                    <directory>${project.basedir}/target/reports/apidocs</directory>
+                                </fileset>
+                            </filesets>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+ 
+    <build>
+        <plugins>
+            <!-- Para generar la documentación en docs/apidocs -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <!-- La última versión puede consultarse en el repositorio de Maven -->
+                <version>${javadoc.plugin.version}</version>
+                <configuration>
+                    <source>${maven.compiler.release}</source>
+                    <show>private</show>  <!-- Incluye entidades privadas -->
+                </configuration>
+            </plugin>
+        </plugins>
+
+        <resources>
+           <!-- Para definir valores de propiedades presentes en este archivo para la aplicacion Java -->
+           <resource>
+              <directory>src/main/resources</directory>
+              <includes>
+                 <include>**/*.properties</include>
+              </includes>
+              <filtering>true</filtering>
+           </resource>
+        </resources>
+    </build>
+
+    <dependencies>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.5.18</version>
+        </dependency>
+ 
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>2.1.0-alpha1</version>
+        </dependency>
+
+        <!-- Driver para conexión a SQLite -->
+        <dependency>
+            <groupId>org.xerial</groupId>
+            <artifactId>sqlite-jdbc</artifactId>
+            <version>3.51.0.0</version>
+        </dependency>
+    </dependencies>
+
+</project>
