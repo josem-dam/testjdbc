@@ -26,13 +26,16 @@ public class Main {
         // Alternativa particular de SQLite: base de datos en memoria.
         String dbUrl = String.format("%s%s", dbProtocol, ":memory:");
 
+        ConnectionPool cp = ConnectionPool.getInstance(dbUrl);
+
         Centro[] centros = new Centro[] {
             new Centro(11004866, "IES Castillo de Luna", Titularidad.PUBLICA),
             new Centro(11700602, "IES Pintor Juan Lara", Titularidad.PUBLICA),
             new Centro(21002100, "IES Padre José Miravent", Titularidad.PUBLICA)
         };
 
-        try(Connection conn = DriverManager.getConnection(dbUrl)) {
+        
+        try(Connection conn = cp.getConnection()) {
             System.out.println("Hemos logrado conectar a la base de datos");
 
             try(Statement stmt = conn.createStatement()) {
@@ -125,5 +128,7 @@ public class Main {
             err.printStackTrace();
             System.err.println("Error de conexión. " + err.getMessage());
         }
+
+        Chorrada.ejecutar();
     }
 }
