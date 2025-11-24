@@ -53,6 +53,20 @@ public class Main {
         }
     }
 
+    public static Estudiante getEstudiante(int id) throws SQLException {
+        String sqlString = "SELECT * FROM Estudiante WHERE id = ?";
+        ConnectionPool cp = ConnectionPool.getInstance();
+
+        try(
+            Connection conn = cp.getConnection();
+            PreparedStatement pstmt = conn.prepareStatement(sqlString);
+        ) {
+            pstmt.setInt(1, id);
+            ResultSet rs = pstmt.executeQuery();
+            return rs.next() ? resultSetToEstudiante(rs) : null;
+        }
+    } 
+
     public static List<Centro> getCentros() throws SQLException {
         String sqlString = "SELECT * FROM Centro";
         ConnectionPool cp = ConnectionPool.getInstance();
@@ -64,21 +78,66 @@ public class Main {
             Statement stmt = conn.createStatement();
             ResultSet rs = stmt.executeQuery(sqlString);
         ) {
-            // ¡¡ Cuidado con que falle la creación de un centro.
-            while(rs.next()) centros.add(resultSetToCentro(rs));
+            // Si falla la creación de un centro,
+            // se captura la excepción y se pasa al siguiente.
+            while(rs.next()) {
+                try {
+                    centros.add(resultSetToCentro(rs));
+                }
+                catch(SQLException e) {
+                    // Registrar el error y continuar.
+                }
+            }
         }
 
         return centros;
     }
 
+    public static List<Estudiante> getEstudiantes() throws SQLException {
+        String sqlString = "SELECT * FROM Estudiante";
+        ConnectionPool cp = ConnectionPool.getInstance();
+
+        List<Estudiante> estudiantes = new ArrayList<>();
+
+        try(
+            Connection conn = cp.getConnection();
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery(sqlString);
+        ) {
+            while(rs.next()) {
+                try {
+                    estudiantes.add(resultSetToEstudiante(rs));
+                }
+                catch(SQLException e) {
+                    // Registrar el error y continuar.
+                }
+            }
+        }
+
+        return estudiantes;
+    }
+
+    /*
+    public static Centro getCentro(int id) throws SQLException {
+        String sqlString = "SELECT * FROM Centro WHERE id = ?";
+        return GenericQueries.get(id, sqlString, Main::resultSetToCentro);
+    }
+
     public static Estudiante getEstudiante(int id) throws SQLException {
-        return null;
-    } 
+        String sqlString = "SELECT * FROM Estudiante WHERE id = ?";
+        return GenericQueries.get(id, sqlString, Main::resultSetToEstudiante);
+    }
+
+    public static List<Centro> getCentros() throws SQLException {
+        String sqlString = "SELECT * FROM Centro";
+        return GenericQueries.getAll(sqlString, Main::resultSetToCentro);
+    }   
 
     public static List<Estudiante> getEstudiantes() throws SQLException {
-        return null;
-
+        String sqlString = "SELECT * FROM Estudiante";
+        return GenericQueries.getAll(sqlString, Main::resultSetToEstudiante);
     }
+    */
 
     public static void main(String[] args) {
         final String dbProtocol = "jdbc:sqlite:";
@@ -137,13 +196,8 @@ public class Main {
                 }
             }
 
-            try(Statement stmt = conn.createStatement()) {
-                ResultSet rs = stmt.executeQuery("SELECT * FROM Centro");
-                while(rs.next()) {
-                    Centro centro = resultSetToCentro(rs);
-                    System.out.println(centro);
-                }
-            }
+            List<Centro> centrosRec = getCentros();
+            centrosRec.forEach(System.out::println);
 
             System.out.println("--- *** ---");
             System.out.println(getCentro(11004866));
@@ -171,6 +225,10 @@ public class Main {
                     }
                 }
             }
+
+            System.out.println("--- *** Estudiantes recuperados *** ---");
+            List<Estudiante> estudiantesRec = getEstudiantes();
+            estudiantesRec.forEach(System.out::println);
         }
         catch(SQLException err) {
             err.printStackTrace();
