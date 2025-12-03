@@ -67,6 +67,13 @@
               </includes>
               <filtering>true</filtering>
            </resource>
+           <resource>
+              <directory>src/main/resources</directory>
+              <includes>
+                 <include>centros.sql</include>
+              </includes>
+              <filtering>false</filtering>
+           </resource>
         </resources>
     </build>
 

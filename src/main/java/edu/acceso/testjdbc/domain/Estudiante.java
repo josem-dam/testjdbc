@@ -61,7 +61,7 @@ public class Estudiante {
     }
 
     public int getEdad() {
-        return Period.between(LocalDate.now(), nacimiento).getYears();
+        return Period.between(nacimiento, LocalDate.now()).getYears();
     }
 
     @Override

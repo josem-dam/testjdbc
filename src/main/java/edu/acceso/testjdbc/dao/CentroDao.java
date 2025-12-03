@@ -90,7 +90,7 @@ public class CentroDao implements GenericDao<Centro> {
     public int insert(Centro centro) throws SQLException {
         String sqlString = "INSERT INTO Centro (nombre, titularidad, id) VALUES (?, ?, ?)";
 
-        try(
+        try (
             Connection conn = cp.getConnection();
             PreparedStatement pstmt = conn.prepareStatement(sqlString);
         ) {
@@ -98,12 +98,29 @@ public class CentroDao implements GenericDao<Centro> {
             pstmt.executeUpdate();
             return centro.getId();
         }
+
     }
 
     @Override
-    public void insert(Iterable<Centro> entities) throws SQLException {
-        // TODO Auto-generated method stub
-        
+    public void insert(Iterable<Centro> centros) throws SQLException {
+        String sqlString = "INSERT INTO Centro (nombre, titularidad, id) VALUES (?, ?, ?)";
+
+        Connection conn = cp.getConnection();
+        conn.setAutoCommit(false);
+        try(PreparedStatement pstmt = conn.prepareStatement(sqlString)) {
+            for(Centro centro: centros) {
+                setParams(pstmt, centro);
+                pstmt.addBatch();
+            }
+            pstmt.executeBatch();
+            conn.commit();
+        } catch(SQLException err) {
+            err.printStackTrace();
+            conn.rollback();
+            throw err;
+        } finally {
+            conn.setAutoCommit(true);
+        }
     }
 
     @Override

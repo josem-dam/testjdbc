@@ -1,94 +1,34 @@
 package edu.acceso.testjdbc;
 
-import java.nio.file.Path;
 import java.sql.Connection;
-import java.sql.Date;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.Types;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
 
+import org.slf4j.LoggerFactory;
+
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import edu.acceso.testjdbc.dao.CentroDao;
+import edu.acceso.testjdbc.dao.EstudianteDao;
 import edu.acceso.testjdbc.domain.Centro;
 import edu.acceso.testjdbc.domain.Estudiante;
 import edu.acceso.testjdbc.domain.Titularidad;
 
 public class Main {
 
-    public static Centro resultSetToCentro(ResultSet rs) throws SQLException {
-        int id = rs.getInt("id");
-        String nombre = rs.getString("nombre");
-        Titularidad titularidad = Titularidad.fromString(rs.getString("titularidad"));
-        return new Centro(id, nombre, titularidad);
-    }
-
-    public static Estudiante resultSetToEstudiante(ResultSet rs) throws SQLException {
-        int id = rs.getInt("id");
-        String nombre = rs.getString("nombre");
-        LocalDate nacimiento = rs.getDate("nacimiento").toLocalDate();
-        Integer idCentro = rs.getInt("centro");
-
-        // ¡¡¡¡ Tengo que obtener el centro, no me vale el identificador !!!!!
-
-        Centro centro = null;
-        if(rs.wasNull()) idCentro = null;
-        else centro = getCentro(idCentro);
-        return new Estudiante(id, nombre, nacimiento, centro);
-    }
-
-    public static Centro getCentro(int id) throws SQLException {
-        String sqlString = "SELECT * FROM Centro WHERE id = ?";
-        ConnectionPool cp = ConnectionPool.getInstance();
-
-        try(
-            Connection conn = cp.getConnection();
-            PreparedStatement pstmt = conn.prepareStatement(sqlString);
-        ) {
-            pstmt.setInt(1, id);
-            ResultSet rs = pstmt.executeQuery();
-            return rs.next() ? resultSetToCentro(rs) : null;
-        }
-    }
-
-    public static List<Centro> getCentros() throws SQLException {
-        String sqlString = "SELECT * FROM Centro";
-        ConnectionPool cp = ConnectionPool.getInstance();
-
-        List<Centro> centros = new ArrayList<>();
-
-        try(
-            Connection conn = cp.getConnection();
-            Statement stmt = conn.createStatement();
-            ResultSet rs = stmt.executeQuery(sqlString);
-        ) {
-            // ¡¡ Cuidado con que falle la creación de un centro.
-            while(rs.next()) centros.add(resultSetToCentro(rs));
-        }
-
-        return centros;
-    }
-
-    public static Estudiante getEstudiante(int id) throws SQLException {
-        return null;
-    } 
-
-    public static List<Estudiante> getEstudiantes() throws SQLException {
-        return null;
-
-    }
-
     public static void main(String[] args) {
         final String dbProtocol = "jdbc:sqlite:";
+
+        Logger hikariLogger = (Logger) LoggerFactory.getLogger("com.zaxxer.hikari");
+        hikariLogger.setLevel(Level.WARN);
 
         // Las bases de datos de SQLite son archivos.
         //Path dbPath = Path.of(System.getProperty("java.io.tmpdir"), "test.db");
         //String dbUrl = String.format("%s%s", dbProtocol, dbPath);
 
         // Alternativa particular de SQLite: base de datos en memoria.
-        String dbUrl = String.format("%s%s", dbProtocol, ":memory:");
+        String dbUrl = String.format("%s%s", dbProtocol, "file::memory:?cache=shared");
 
         ConnectionPool cp = ConnectionPool.getInstance(dbUrl);
 
@@ -128,26 +68,19 @@ public class Main {
 
             }
 
-            String sqlString = "INSERT INTO Centro VALUES (?, ?, ?);";
-            try(PreparedStatement pstmt = conn.prepareStatement(sqlString)) {
-                for(Centro centro: centros) {
-                    pstmt.setInt(1, centro.getId());
-                    pstmt.setString(2, centro.getNombre());
-                    pstmt.setString(3, centro.getTitularidad().toString());
-                    pstmt.executeUpdate();
-                }
-            }
+            CentroDao centroDao = new CentroDao(cp);
+            EstudianteDao estudianteDao = new EstudianteDao(cp);
 
-            try(Statement stmt = conn.createStatement()) {
-                ResultSet rs = stmt.executeQuery("SELECT * FROM Centro");
-                while(rs.next()) {
-                    Centro centro = resultSetToCentro(rs);
-                    System.out.println(centro);
-                }
-            }
+            // Agrego los centros a la base de datos.
+            centroDao.insert(centros);
+
+            // Compruebo centros.
+            System.out.println("--- Lista de centros ---");
+            centroDao.get().forEach(System.out::println);
+            System.out.println("--- *** ---");
 
             System.out.println("--- *** ---");
-            System.out.println(getCentro(11004866));
+            System.out.println(centroDao.get(11004866));
             System.out.println("--- *** ---");
 
             Estudiante[] estudiantes = new Estudiante[] {
@@ -155,23 +88,13 @@ public class Main {
                 new Estudiante(null, "Segismundo Vergara", LocalDate.of(2002, 02, 02), null)
             };
 
-            sqlString = "INSERT INTO Estudiante VALUES (?, ?, ?, ?)";
-            try(PreparedStatement pstmt = conn.prepareStatement(sqlString)) {
-                for(Estudiante estudiante: estudiantes) {
-                    pstmt.setObject(1, estudiante.getId(), Types.INTEGER);
-                    pstmt.setString(2, estudiante.getNombre());
-                    Date nacimiento = Date.valueOf(estudiante.getNacimiento());
-                    pstmt.setDate(3, nacimiento);
-                    Integer idCentro = estudiante.getCentro() == null ? null : estudiante.getCentro().getId();
-                    pstmt.setObject(4, idCentro, Types.INTEGER);
-                    pstmt.executeUpdate();
-                    try(ResultSet rs = pstmt.getGeneratedKeys()) {
-                        if(rs.next()) estudiante.setId(rs.getInt(1));
-                        else assert false: "La base de datos no devolvió identificador para el estudiante";
-                        System.out.printf("'%s' obtiene el identificador %d.\n", estudiante.getNombre(), estudiante.getId());
-                    }
-                }
+            estudianteDao.insert(estudiantes);
+
+            System.out.println("--- Lista de estudiantes ---");
+            for(Estudiante estudiante: estudianteDao.get()) {
+                System.out.printf("Estudiante %d: %s.\n", estudiante.getId(), estudiante);
             }
+            System.out.println("--- *** ---");
         }
         catch(SQLException err) {
             err.printStackTrace();
