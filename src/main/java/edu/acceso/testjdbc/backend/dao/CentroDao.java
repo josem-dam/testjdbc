@@ -1,4 +1,4 @@
-package edu.acceso.testjdbc.dao;
+package edu.acceso.testjdbc.backend.dao;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -8,16 +8,17 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
-import edu.acceso.testjdbc.ConnectionPool;
+import edu.acceso.sqlutils.errors.DataAccessException;
+import edu.acceso.testjdbc.backend.Conexion;
 import edu.acceso.testjdbc.domain.Centro;
 import edu.acceso.testjdbc.domain.Titularidad;
 
 public class CentroDao implements GenericDao<Centro> {
 
-    private ConnectionPool cp;
+    private Conexion cx;
 
-    public CentroDao(ConnectionPool cp) {
-        this.cp = cp;
+    public CentroDao(Conexion cx) {
+        this.cx = cx;
     }
 
     private static Centro resultSetToCentro(ResultSet rs) throws SQLException {
@@ -28,27 +29,29 @@ public class CentroDao implements GenericDao<Centro> {
     }
 
     @Override
-    public Centro get(int id) throws SQLException {
+    public Centro get(int id) throws DataAccessException {
         String sqlString = "SELECT * FROM Centro WHERE id = ?";
 
         try(
-            Connection conn = cp.getConnection();
+            Connection conn = cx.getConnection();
             PreparedStatement pstmt = conn.prepareStatement(sqlString);
         ) {
             pstmt.setInt(1, id);
             ResultSet rs = pstmt.executeQuery();
             return rs.next() ? resultSetToCentro(rs) : null;
+        } catch(SQLException e) {
+            throw new DataAccessException(e);
         }
     }
 
     @Override
-    public List<Centro> get() throws SQLException {
+    public List<Centro> get() throws DataAccessException {
         String sqlString = "SELECT * FROM Centro";
 
         List<Centro> centros = new ArrayList<>();
 
         try(
-            Connection conn = cp.getConnection();
+            Connection conn = cx.getConnection();
             Statement stmt = conn.createStatement();
             ResultSet rs = stmt.executeQuery(sqlString);
         ) {
@@ -61,22 +64,26 @@ public class CentroDao implements GenericDao<Centro> {
                     System.err.println("Un registro no puede convertirse en centro: " + e.getMessage());
                 }
             }
+        } catch(SQLException e) {
+            throw new DataAccessException(e);
         }
 
         return centros;
     }
 
     @Override
-    public boolean remove(int id) throws SQLException {
+    public boolean remove(int id) throws DataAccessException {
         String sqlString = "DELETE FROM Centro WHERE id = ?";
 
         try(
-            Connection conn = cp.getConnection();
+            Connection conn = cx.getConnection();
             PreparedStatement pstmt = conn.prepareStatement(sqlString);
         ) {
             pstmt.setInt(1, id);
             int rows = pstmt.executeUpdate();
             return rows > 0;
+        } catch(SQLException e) {
+            throw new DataAccessException(e);
         }
     }
 
@@ -87,53 +94,60 @@ public class CentroDao implements GenericDao<Centro> {
     }
 
     @Override
-    public int insert(Centro centro) throws SQLException {
+    public int insert(Centro centro) throws DataAccessException {
         String sqlString = "INSERT INTO Centro (nombre, titularidad, id) VALUES (?, ?, ?)";
 
         try (
-            Connection conn = cp.getConnection();
+            Connection conn = cx.getConnection();
             PreparedStatement pstmt = conn.prepareStatement(sqlString);
         ) {
             setParams(pstmt, centro);
             pstmt.executeUpdate();
             return centro.getId();
+        } catch(SQLException e) {
+            throw new DataAccessException(e);
         }
 
     }
 
     @Override
-    public void insert(Iterable<Centro> centros) throws SQLException {
+    public void insert(Iterable<Centro> centros) throws DataAccessException {
         String sqlString = "INSERT INTO Centro (nombre, titularidad, id) VALUES (?, ?, ?)";
 
-        Connection conn = cp.getConnection();
-        conn.setAutoCommit(false);
-        try(PreparedStatement pstmt = conn.prepareStatement(sqlString)) {
-            for(Centro centro: centros) {
-                setParams(pstmt, centro);
-                pstmt.addBatch();
+        try (Connection conn = cx.getConnection()) {
+            conn.setAutoCommit(false);
+            try(PreparedStatement pstmt = conn.prepareStatement(sqlString)) {
+                for(Centro centro: centros) {
+                    setParams(pstmt, centro);
+                    pstmt.addBatch();
+                }
+                pstmt.executeBatch();
+                conn.commit();
+            } catch(SQLException err) {
+                err.printStackTrace();
+                conn.rollback();
+                throw err;
+            } finally {
+                conn.setAutoCommit(true);
             }
-            pstmt.executeBatch();
-            conn.commit();
-        } catch(SQLException err) {
-            err.printStackTrace();
-            conn.rollback();
-            throw err;
-        } finally {
-            conn.setAutoCommit(true);
+        } catch(SQLException e) {
+            throw new DataAccessException(e);
         }
     }
 
     @Override
-    public void update(Centro centro) throws SQLException {
+    public void update(Centro centro) throws DataAccessException {
         String sqlString = "UPDATE Centro SET nombre = ?, titularidad = ? WHERE id = ?";
 
         try(
-            Connection conn = cp.getConnection();
+            Connection conn = cx.getConnection();
             PreparedStatement pstmt = conn.prepareStatement(sqlString);
         ) {
             setParams(pstmt, centro);
             int rows = pstmt.executeUpdate();
             if(rows == 0) throw new IllegalArgumentException(String.format("El centro con ID %d no existe", centro.getId()));
+        } catch(SQLException e) {
+            throw new DataAccessException(e);
         }
     }
 }

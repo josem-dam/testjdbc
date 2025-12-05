@@ -77,6 +77,13 @@
         </resources>
     </build>
 
+    <repositories>
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
+        </repository>
+    </repositories>
+
     <dependencies>
         <dependency>
             <groupId>ch.qos.logback</groupId>
@@ -102,6 +109,13 @@
             <groupId>com.zaxxer</groupId>
             <artifactId>HikariCP</artifactId>
             <version>6.3.0</version>
+        </dependency>
+
+        <!-- Mis utilidades para SQL -->
+        <dependency>
+            <groupId>com.github.sio2sio2</groupId>
+            <artifactId>sqlutils</artifactId>
+            <version>2.0.1</version>
         </dependency>
     </dependencies>
 
