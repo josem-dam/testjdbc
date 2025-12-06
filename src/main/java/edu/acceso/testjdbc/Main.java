@@ -3,6 +3,8 @@ package edu.acceso.testjdbc;
 import java.io.IOException;
 import java.time.LocalDate;
 
+import javax.sql.DataSource;
+
 import org.slf4j.LoggerFactory;
 
 import ch.qos.logback.classic.Level;
@@ -23,10 +25,11 @@ public class Main {
 
         String url = "file::memory:?cache=shared";
 
-        Conexion cx = null;
+        DataSource ds = null;
         
         try {
-            cx = Conexion.create(url, "resources:/centros.sql");
+            Conexion cx = Conexion.create(url, "resources:/centros.sql");
+            ds = cx.getDataSource();
             System.out.println("Hemos logrado conectar a la base de datos");
         } catch(IOException e) {
             System.err.println("Es imposible acceder a la base de datos");
@@ -42,8 +45,8 @@ public class Main {
 
         
         try {
-            CentroDao centroDao = new CentroDao(cx);
-            EstudianteDao estudianteDao = new EstudianteDao(cx);
+            CentroDao centroDao = new CentroDao(ds);
+            EstudianteDao estudianteDao = new EstudianteDao(ds);
 
             // Agrego los centros a la base de datos.
             centroDao.insert(centros);

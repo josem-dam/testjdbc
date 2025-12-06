@@ -9,6 +9,8 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import javax.sql.DataSource;
+
 import edu.acceso.sqlutils.ConnectionPool;
 import edu.acceso.sqlutils.SqlUtils;
 import edu.acceso.sqlutils.errors.DataAccessException;
@@ -17,13 +19,13 @@ public class Conexion {
 
     private static Conexion instance;
 
-    private final ConnectionPool cp;
+    private final DataSource ds;
     private static final String sgbd = "jdbc:sqlite:";
     private static final String tabla = "Centro";
 
     private Conexion(String path) {
         String url = sgbd + path;
-        cp = ConnectionPool.getInstance(url);
+        ds = ConnectionPool.getInstance(url).getDataSource();
     }
 
     public static Conexion create(String path) {
@@ -84,13 +86,13 @@ public class Conexion {
         }
     }
 
-    public ConnectionPool getConnectionPool() {
-        return cp;
+    public DataSource getDataSource() {
+        return ds;
     }
 
     public Connection getConnection() throws DataAccessException {
         try {
-            return cp.getConnection();
+            return ds.getConnection();
         } catch(SQLException e) {
             throw new DataAccessException(e);
         }
