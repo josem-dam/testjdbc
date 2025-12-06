@@ -13,25 +13,33 @@ import java.util.List;
 
 import javax.sql.DataSource;
 
+import edu.acceso.sqlutils.ConnProvider;
 import edu.acceso.sqlutils.errors.DataAccessException;
 import edu.acceso.testjdbc.domain.Centro;
 import edu.acceso.testjdbc.domain.Estudiante;
 
 public class EstudianteDao implements GenericDao<Estudiante> {
 
-    private DataSource ds;
+    private final ConnProvider cp;
 
     public EstudianteDao(DataSource ds) {
-        this.ds = ds;
+        cp = new ConnProvider(ds);
     }
 
+    public EstudianteDao(Connection conn) {
+        cp = new ConnProvider(conn);
+    }
+
+    public EstudianteDao(ConnProvider cp) {
+        this.cp = cp;
+    }
 
     @Override
     public Estudiante get(int id) throws DataAccessException {
         String sqlString = "SELECT * FROM Estudiante WHERE id = ?";
 
         try (
-            Connection conn = ds.getConnection();
+            Connection conn = cp.getConnection();
             PreparedStatement pstmt = conn.prepareStatement(sqlString);
         ) {
             pstmt.setInt(1, id);
@@ -50,7 +58,7 @@ public class EstudianteDao implements GenericDao<Estudiante> {
         List<Estudiante> estudiantes = new ArrayList<>();
 
         try(
-            Connection conn = ds.getConnection();
+            Connection conn = cp.getConnection();
             Statement stmt = conn.createStatement();
             ResultSet rs = stmt.executeQuery(sqlString);
         ) {
@@ -76,7 +84,7 @@ public class EstudianteDao implements GenericDao<Estudiante> {
         if(estudiante.getId() != null) throw new IllegalArgumentException("El estudiante no puede tener identificador ya fijado");
 
         try(
-            Connection conn = ds.getConnection();
+            Connection conn = cp.getConnection();
             PreparedStatement pstmt = conn.prepareStatement(sqlString);
         ) {
             setParams(pstmt, estudiante);
@@ -96,7 +104,7 @@ public class EstudianteDao implements GenericDao<Estudiante> {
     public void insert(Iterable<Estudiante> estudiantes) throws DataAccessException {
         String sqlString = "INSERT INTO Estudiante (nombre, nacimiento, centro, id) VALUES (?, ?, ?, ?)";
 
-        try (Connection conn = ds.getConnection()) {
+        try (Connection conn = cp.getConnection()) {
             conn.setAutoCommit(false);
             try(PreparedStatement pstmt = conn.prepareStatement(sqlString)) {
                 for(Estudiante estudiante: estudiantes) {
@@ -127,7 +135,7 @@ public class EstudianteDao implements GenericDao<Estudiante> {
         String sqlString = "DELETE FROM Estudiante WHERE id = ?";
 
         try (
-            Connection conn = ds.getConnection();
+            Connection conn = cp.getConnection();
             PreparedStatement pstmt = conn.prepareStatement(sqlString);
         ) {
             pstmt.setInt(1, id);
@@ -144,7 +152,7 @@ public class EstudianteDao implements GenericDao<Estudiante> {
         String sqlString = "UPDATE Estudiante SET nombre = ?, nacimiento = ?, centro = ? WHERE id = ?";
 
         try(
-            Connection conn = ds.getConnection();
+            Connection conn = cp.getConnection();
             PreparedStatement pstmt = conn.prepareStatement(sqlString);
         ) {
             setParams(pstmt, estudiante);
@@ -174,7 +182,7 @@ public class EstudianteDao implements GenericDao<Estudiante> {
         Centro centro = null;
 
         if(centroId != null) {
-            CentroDao centroDao = new CentroDao(ds);
+            CentroDao centroDao = new CentroDao(cp);
             centro = centroDao.get(centroId);
         }
 

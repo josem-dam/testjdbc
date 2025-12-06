@@ -1,7 +1,7 @@
 /* Creación de la base de datos para centros y estudiantes */
 
 CREATE TABLE Centro (
-    id          INTEGER             PRIMARY KEY,
+    id          INT                 PRIMARY KEY,
     nombre      VARCHAR(200)        NOT NULL,
     titularidad CHAR(7)             CHECK (titularidad IN ('pública','privada'))
 );
